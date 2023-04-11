@@ -79,6 +79,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
         add_zero_attn=False,
         self_attention=False,
         encoder_decoder_attention=False,
+        dictionary=None,
         q_noise=0.0,
         qn_block_size=8,
         # TODO: pass in config rather than string.
@@ -91,7 +92,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
             int
         ] = 16,  # This should be part of the config
     ):
-        super().__init__()
+        super().__init__(dictionary)
 
         xformers_att_config = utils.eval_str_dict(xformers_att_config)
         self.use_xformers = xformers_att_config is not None
