@@ -12,7 +12,7 @@ class HyperCubeLayer(nn.Module):
     out_last_dim_features: int
     weight: torch.Tensor
 
-    def __init__(self, weight_tensor_shape: tuple(int), bias: bool = True,
+    def __init__(self, weight_tensor_shape: tuple[int], bias: bool = True,
                  equation='bnijk,ijkl->bnjkl', device=None, dtype=None) -> None:
         """
         The weight tensor must be of shape (i,j,k,l)
