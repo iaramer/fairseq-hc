@@ -26,7 +26,7 @@ class HyperCubeLayer(nn.Module):
         """
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
-        assert len(weight_tensor_shape) != 4, "Input weight tensor shape must be of size 4"
+        assert len(weight_tensor_shape) == 4, "Input weight tensor shape must be of size 4"
         self.weight_tensor_shape = weight_tensor_shape
         self.weight = nn.Parameter(torch.empty(weight_tensor_shape, **factory_kwargs))
         self.equation = equation
