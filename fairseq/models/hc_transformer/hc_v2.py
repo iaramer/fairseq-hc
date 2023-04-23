@@ -93,5 +93,5 @@ class HyperCubeBlock(nn.Module):
         x = self.hc_layers_2(x)
         # x = self.relu(x)  # TODO: Experiment with intermediate activation
         x = self.hc_layers_3(x)
-        x = x.view(sh)
+        x = x.contiguous().view(sh)
         return x
