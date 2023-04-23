@@ -134,6 +134,16 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
         self.out_proj = quant_noise(
             HyperCubeBlock(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
         )
+        self.multihead_attn = nn.MultiheadAttention(
+            embed_dim, 
+            num_heads,
+            dropout,
+            bias,
+            add_bias_kv,
+            add_zero_attn,
+            kdim,
+            vdim
+        )
 
         if add_bias_kv:
             self.bias_k = Parameter(torch.Tensor(1, 1, embed_dim))
@@ -553,6 +563,21 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
                 )
 
             else:
+                query = self.q_proj(query)
+                key = self.k_proj(key)
+                value = self.v_proj(value)
+                attn_output, attn_output_weights = self.multihead_attn(
+                    query, 
+                    key, 
+                    value,
+                    key_padding_mask=key_padding_mask.bool() if key_padding_mask is not None else None,
+                    need_weights=need_weights,
+                    attn_mask=attn_mask
+                )
+                attn_output = self.out_proj(attn_output)
+                return attn_output, attn_output_weights
+                # raise NotImplementedError("Not implemented for the Hypercube-based model.")
+                
                 # return F.multi_head_attention_forward(
                 #     query,
                 #     key,
@@ -576,7 +601,6 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
                 #     k_proj_weight=self.k_proj.weight,
                 #     v_proj_weight=self.v_proj.weight,
                 # )
-                raise NotImplementedError("Not implemented for the Hypercube-based model.")
 
 
         if incremental_state is not None:
