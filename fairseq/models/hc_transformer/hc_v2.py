@@ -63,6 +63,8 @@ class HyperCubeBlock(nn.Module):
         super(HyperCubeBlock, self).__init__()
         if in_features not in PERFECT_CUBES or out_features not in PERFECT_CUBES:
             raise NotImplementedError(f"Both `in_features` and `out_features` must be perfect cubes, however the following params were given: {in_features} and {out_features}")
+        self.in_features = in_features
+        self.out_features = out_features
         self.in_features_edge_dim = in_edge = PERFECT_CUBES[in_features]
         self.out_features_edge_dim = out_edge = PERFECT_CUBES[out_features]
         self.hc_layers_1 = HyperCubeLayer(
@@ -100,5 +102,5 @@ class HyperCubeBlock(nn.Module):
         x = self.hc_layers_2(x)
         # x = self.relu(x)  # TODO: Experiment with intermediate activation
         x = self.hc_layers_3(x)
-        x = x.contiguous().view(sh)
+        x = x.contiguous().view((*sh[:-1], self.out_features))
         return x
