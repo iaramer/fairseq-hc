@@ -13,7 +13,8 @@ class HyperCubeLayer(nn.Module):
     weight: torch.Tensor
 
     def __init__(self, weight_tensor_shape: tuple[int], bias: bool = True,
-                 equation='bnijk,ijkl->bnjkl', device=None, dtype=None) -> None:
+                 bias_shape: tuple[int] = None, equation='bnijk,ijkl->bnjkl', 
+                 device=None, dtype=None) -> None:
         """
         The weight tensor must be of shape (i,j,k,l)
 
@@ -31,7 +32,9 @@ class HyperCubeLayer(nn.Module):
         self.weight = nn.Parameter(torch.empty(weight_tensor_shape, **factory_kwargs))
         self.equation = equation
         if bias:
-            self.bias = nn.Parameter(torch.empty((weight_tensor_shape[-1],), **factory_kwargs))
+            if not bias_shape:
+                raise RuntimeError("Unable to initialize bias, `bias_shape` is not provided.")
+            self.bias = nn.Parameter(torch.empty(bias_shape, **factory_kwargs))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
@@ -49,7 +52,6 @@ class HyperCubeLayer(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        print((x.shape, self.weight.shape))
         x = torch.einsum(self.equation, x, self.weight)
         x += self.bias
         return x
@@ -66,6 +68,7 @@ class HyperCubeBlock(nn.Module):
         self.hc_layers_1 = HyperCubeLayer(
             (in_edge, in_edge, in_edge, out_edge),
             bias=bias,
+            bias_shape=(in_edge, out_edge, in_edge),
             equation='bnijk,ijkl->bnilj',
             device=device, 
             dtype=dtype
@@ -73,6 +76,7 @@ class HyperCubeBlock(nn.Module):
         self.hc_layers_2 = HyperCubeLayer(
             (in_edge, out_edge, in_edge, out_edge),
             bias=bias,
+            bias_shape=(out_edge, out_edge, in_edge),
             equation='bnilj,iljp->bnpli',
             device=device, 
             dtype=dtype
@@ -80,6 +84,7 @@ class HyperCubeBlock(nn.Module):
         self.hc_layers_3 = HyperCubeLayer(
             (out_edge, out_edge, in_edge, out_edge),
             bias=bias,
+            bias_shape=(out_edge, out_edge, out_edge),
             equation='bnpli,pliq->bnplq',
             device=device, 
             dtype=dtype
