@@ -49,7 +49,9 @@ class HyperCubeLayer(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.einsum(self.equation, x, self.weight) + self.bias
+        print((x.shape, self.weight.shape))
+        x = torch.einsum(self.equation, x, self.weight)
+        x += self.bias
         return x
 
 
