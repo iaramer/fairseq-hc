@@ -495,7 +495,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
 
     def forward(
         self,
-        query,
+        query: Tensor,
         key: Optional[Tensor],
         value: Optional[Tensor],
         key_padding_mask: Optional[Tensor] = None,
@@ -783,6 +783,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
         attn_probs = self.dropout_module(attn_weights)
 
         assert v is not None
+        attn: Optional[Tensor] = None
         if self.encoder_decoder_attention and bsz != kv_bsz:
             attn = torch.einsum(
                 "bxhts,bhsd->bxhtd",
@@ -871,7 +872,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
     @torch.jit.export
     def reorder_incremental_state(
         self,
-        incremental_state: Dict[str, Dict[str, Optional[Tensor]]],
+        incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]],
         new_order: Tensor,
     ):
         """Reorder buffered internal state (for incremental generation)."""
@@ -912,7 +913,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
 
     def _set_input_buffer(
         self,
-        incremental_state: Dict[str, Dict[str, Optional[Tensor]]],
+        incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]],
         buffer: Dict[str, Optional[Tensor]],
     ):
         return self.set_incremental_state(incremental_state, "attn_state", buffer)
@@ -921,7 +922,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
         return attn_weights
 
     def upgrade_state_dict_named(self, state_dict, name):
-        raise NotImplementedError("Not implemented for the Hypercube-based transformer.")
+        # raise NotImplementedError("Not implemented for the Hypercube-based transformer.")
         prefix = name + "." if name != "" else ""
         items_to_add = {}
         keys_to_remove = []
