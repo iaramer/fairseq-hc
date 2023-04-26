@@ -3,16 +3,14 @@ import torch.nn as nn
 from fairseq import utils
 from fairseq.models import register_model, register_model_architecture
 from fairseq.models.transformer import TransformerModel, TransformerEncoder, TransformerDecoder
-from fairseq.modules.transformer_layer import TransformerEncoderLayer, TransformerDecoderLayer
+from fairseq.modules.transformer_layer import TransformerEncoderLayerBase, TransformerDecoderLayerBase
 from torch.nn import LayerNorm
 import torch.nn.functional as F
 from .hc_multihead_attention import HCMultiheadAttention
 from .hc_v2 import HyperCubeBlock
 
 
-# TODO: base on TransformerLanguageModel (!)
-# TODO: add checks for valid HyperCubeBlock dims
-class HCTransformerEncoderLayer(TransformerEncoderLayer):
+class HCTransformerEncoderLayer(TransformerEncoderLayerBase):
     def __init__(self, args):
         self.args = args
         super().__init__(args)
@@ -21,6 +19,10 @@ class HCTransformerEncoderLayer(TransformerEncoderLayer):
             self.embed_dim,
             args.encoder_attention_heads,
             dropout=args.attention_dropout,
+            self_attention=True,
+            q_noise=self.quant_noise,
+            qn_block_size=self.quant_noise_block_size,
+            xformers_att_config=args.encoder.xformers_att_config,
         )
         self.self_attn_layer_norm = LayerNorm(self.embed_dim)
         self.dropout = args.dropout
@@ -55,13 +57,19 @@ class HCTransformerEncoderLayer(TransformerEncoderLayer):
         return x, attn
 
 
-class HCTransformerDecoderLayer(TransformerDecoderLayer):
-    def __init__(self, args, no_encoder_attn=False):
+class HCTransformerDecoderLayer(TransformerDecoderLayerBase):
+    def __init__(self, args, no_encoder_attn=False, add_bias_kv=False, add_zero_attn=False):
         super().__init__(args, no_encoder_attn)
         self.self_attn = HCMultiheadAttention(
             self.embed_dim,
             args.decoder_attention_heads,
             dropout=args.attention_dropout,
+            add_bias_kv=add_bias_kv,
+            add_zero_attn=add_zero_attn,
+            self_attention=not args.cross_self_attention,
+            q_noise=self.quant_noise,
+            qn_block_size=self.quant_noise_block_size,
+            xformers_att_config=args.decoder.xformers_att_config,
         )
         self.self_attn_layer_norm = LayerNorm(self.embed_dim)
         if no_encoder_attn:
@@ -71,7 +79,13 @@ class HCTransformerDecoderLayer(TransformerDecoderLayer):
             self.encoder_attn = HCMultiheadAttention(
                 self.embed_dim,
                 args.decoder_attention_heads,
+                kdim=args.encoder.embed_dim,
+                vdim=args.encoder.embed_dim,
                 dropout=args.attention_dropout,
+                encoder_decoder_attention=True,
+                q_noise=self.quant_noise,
+                qn_block_size=self.quant_noise_block_size,
+                xformers_att_config=args.encoder.xformers_att_config,
             )
             self.encoder_attn_layer_norm = LayerNorm(self.embed_dim)
 
