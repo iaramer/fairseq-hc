@@ -608,10 +608,11 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
             if saved_state is not None and "prev_key" in saved_state:
                 # previous time steps are cached - no need to recompute
                 # key and value if they are static
+                print(f"self.encoder_decoder_attention: {self.encoder_decoder_attention}")  # TODO: remove
+                print(f"self.self_attention: {self.self_attention}")  # TODO: remove
+                static_kv = False  # TODO: remove
                 if static_kv:
-                    print(self.encoder_decoder_attention)
-                    print(self.self_attention)
-                    # assert self.encoder_decoder_attention and not self.self_attention
+                    assert self.encoder_decoder_attention and not self.self_attention
                     key = value = None
         else:
             saved_state = None
