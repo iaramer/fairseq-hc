@@ -575,7 +575,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
                     attn_mask=attn_mask
                 )
                 attn_output = self.out_proj(attn_output)
-                return attn_output, attn_output_weights
+                return attn_output, None
                 # raise NotImplementedError("Not implemented for the Hypercube-based model.")
                 
                 # return F.multi_head_attention_forward(
