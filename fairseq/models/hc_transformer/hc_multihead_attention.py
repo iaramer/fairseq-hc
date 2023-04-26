@@ -575,7 +575,7 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
                     attn_mask=attn_mask
                 )
                 attn_output = self.out_proj(attn_output)
-                return attn_output, None
+                return attn_output, attn_output_weights
                 # raise NotImplementedError("Not implemented for the Hypercube-based model.")
                 
                 # return F.multi_head_attention_forward(
@@ -609,7 +609,9 @@ class HCMultiheadAttention(FairseqIncrementalDecoder):
                 # previous time steps are cached - no need to recompute
                 # key and value if they are static
                 if static_kv:
-                    assert self.encoder_decoder_attention and not self.self_attention
+                    print(self.encoder_decoder_attention)
+                    print(self.self_attention)
+                    # assert self.encoder_decoder_attention and not self.self_attention
                     key = value = None
         else:
             saved_state = None
