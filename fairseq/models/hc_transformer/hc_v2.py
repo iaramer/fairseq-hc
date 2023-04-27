@@ -91,16 +91,16 @@ class HyperCubeBlock(nn.Module):
             device=device, 
             dtype=dtype
         )
-        # self.relu = nn.ReLU()
+        self.relu = nn.ReLU()
             
     def forward(self, x):
         sh = x.shape
         in_edge = self.in_features_edge_dim
         x = x.view((*sh[:-1], in_edge, in_edge, in_edge))
         x = self.hc_layers_1(x)
-        # x = self.relu(x)  # TODO: Experiment with intermediate activation
+        x = self.relu(x)
         x = self.hc_layers_2(x)
-        # x = self.relu(x)  # TODO: Experiment with intermediate activation
+        x = self.relu(x)
         x = self.hc_layers_3(x)
         x = x.contiguous().view((*sh[:-1], self.out_features))
         return x
