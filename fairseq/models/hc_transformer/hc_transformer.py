@@ -6,8 +6,20 @@ from fairseq.models.transformer import TransformerModel, TransformerEncoder, Tra
 from fairseq.modules.transformer_layer import TransformerEncoderLayerBase, TransformerDecoderLayerBase
 from torch.nn import LayerNorm
 import torch.nn.functional as F
+
+from .transformer_decoder import TransformerDecoderBase
+from .transformer_encoder import TransformerEncoderBase
 from .hc_multihead_attention import HCMultiheadAttention
 from .hc_v2 import HyperCubeBlock
+from fairseq.models.transformer.transformer_base import TransformerModelBase
+from fairseq.models.transformer.transformer_config import (
+    TransformerConfig,
+    DEFAULT_MAX_SOURCE_POSITIONS,
+    DEFAULT_MAX_TARGET_POSITIONS,
+    DEFAULT_MIN_PARAMS_TO_WRAP,
+)
+from fairseq.models.transformer.transformer_legacy import base_architecture
+from fairseq.dataclass.utils import gen_parser_from_dataclass
 
 
 class HCTransformerEncoderLayer(TransformerEncoderLayerBase):
@@ -194,4 +206,103 @@ def transformer_vaswani_wmt_en_de_big(args):
     args.decoder_ffn_embed_dim = getattr(args, "decoder_ffn_embed_dim", 8000)
     args.decoder_attention_heads = getattr(args, "decoder_attention_heads", 27)
     args.dropout = getattr(args, "dropout", 0.3)
+    hc_transformer_wmt_en_de(args)
+
+
+
+
+
+
+# DEBUG 1
+
+@register_model("hc_transformer_debug_1")
+class TransformerModelHC_debug1(TransformerModelBase):
+    def __init__(self, args, encoder, decoder):
+        cfg = TransformerConfig.from_namespace(args)
+        super().__init__(cfg, encoder, decoder)
+        self.args = args
+
+    @classmethod
+    def add_args(cls, parser):
+        """Add model-specific arguments to the parser."""
+        # we want to build the args recursively in this case.
+        # do not set defaults so that settings defaults from various architectures still works
+        gen_parser_from_dataclass(
+            parser, TransformerConfig(), delete_default=True, with_prefix=""
+        )
+
+    @classmethod
+    def build_model(cls, args, task):
+        """Build a new model instance."""
+
+        # make sure all arguments are present in older models
+        base_architecture(args)
+
+        if args.encoder_layers_to_keep:
+            args.encoder_layers = len(args.encoder_layers_to_keep.split(","))
+        if args.decoder_layers_to_keep:
+            args.decoder_layers = len(args.decoder_layers_to_keep.split(","))
+
+        if getattr(args, "max_source_positions", None) is None:
+            args.max_source_positions = DEFAULT_MAX_SOURCE_POSITIONS
+        if getattr(args, "max_target_positions", None) is None:
+            args.max_target_positions = DEFAULT_MAX_TARGET_POSITIONS
+
+        src_dict, tgt_dict = task.source_dictionary, task.target_dictionary
+
+        if args.share_all_embeddings:
+            if src_dict != tgt_dict:
+                raise ValueError("--share-all-embeddings requires a joined dictionary")
+            if args.encoder_embed_dim != args.decoder_embed_dim:
+                raise ValueError(
+                    "--share-all-embeddings requires --encoder-embed-dim to match --decoder-embed-dim"
+                )
+            if args.decoder_embed_path and (
+                args.decoder_embed_path != args.encoder_embed_path
+            ):
+                raise ValueError(
+                    "--share-all-embeddings not compatible with --decoder-embed-path"
+                )
+            args.share_decoder_input_output_embed = True
+
+        if getattr(args, "offload_activations", False):
+            args.checkpoint_activations = True  # offloading implies checkpointing
+
+        if not args.share_all_embeddings:
+            args.min_params_to_wrap = getattr(
+                args, "min_params_to_wrap", DEFAULT_MIN_PARAMS_TO_WRAP
+            )
+        cfg = TransformerConfig.from_namespace(args)
+        return super().build_model(cfg, task)
+
+    @classmethod
+    def build_embedding(cls, args, dictionary, embed_dim, path=None):
+        return super().build_embedding(
+            TransformerConfig.from_namespace(args), dictionary, embed_dim, path
+        )
+
+    @classmethod
+    def build_encoder(cls, args, src_dict, embed_tokens):
+        # return super().build_encoder(
+        #     TransformerConfig.from_namespace(args), src_dict, embed_tokens
+        # )
+        cfg = TransformerConfig.from_namespace(args)
+        return TransformerEncoderBase(cfg, src_dict, embed_tokens)
+
+    @classmethod
+    def build_decoder(cls, args, tgt_dict, embed_tokens):
+        # return super().build_decoder(
+        #     TransformerConfig.from_namespace(args), tgt_dict, embed_tokens
+        # )
+        cfg = TransformerConfig.from_namespace(args)
+        return TransformerDecoderBase(
+            cfg,
+            tgt_dict,
+            embed_tokens,
+            no_encoder_attn=cfg.no_cross_attention,
+        )
+    
+
+@register_model_architecture('hc_transformer_debug_1', 'hc_transformer_debug_1_wmt_en_de')
+def hc_transformer_debug_1_wmt_en_de(args):
     hc_transformer_wmt_en_de(args)
